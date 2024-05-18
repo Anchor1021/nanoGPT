@@ -31,15 +31,19 @@ class CausalSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         assert config.n_embd % config.n_head == 0
+        self.key = nn.Linear(config.n_embd, config.n_head * config.key_size, bias=config.bias) # add a new head_size parameter, which allows for a smaller key size
+        self.query = nn.Linear(config.n_embd, config.n_head * config.query_size, bias=config.bias) # add a new head_size parameter, which allows for a smaller query size
+        self.value = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
+
         self.n_head = config.n_head
         self.key_size = config.key_size
         self.query_size = config.query_size
         # key, query, value projections for all heads, but in a batch
-        self.c_attn = nn.Linear(config.n_embd, 
-                                config.key_size * config.n_head + 
-                                config.query_size * config.n_head + 
-                                (config.n_embd // config.n_head) * config.n_head, 
-                                bias=config.bias)
+        # self.c_attn = nn.Linear(config.n_embd, 
+        #                         config.key_size * config.n_head + 
+        #                         config.query_size * config.n_head + 
+        #                         (config.n_embd // config.n_head) * config.n_head, 
+        #                         bias=config.bias)
         # self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd, bias=config.bias)
         # output projection
         self.c_proj = nn.Linear(config.n_embd, config.n_embd, bias=config.bias)
@@ -59,8 +63,11 @@ class CausalSelfAttention(nn.Module):
     def forward(self, x):
         B, T, C = x.size() # batch size, sequence length, embedding dimensionality (n_embd)
 
+        k = self.key(x)
+        q = self.query(x)
+        v = self.value(x)
         # calculate query, key, values for all heads in batch and move head forward to be the batch dim
-        q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
+        # q, k, v  = self.c_attn(x).split(self.n_embd, dim=2)
         k = k.view(B, T, self.n_head, self.key_size).transpose(1, 2) # (B, nh, T, hs)
         q = q.view(B, T, self.n_head, self.query_size).transpose(1, 2) # (B, nh, T, hs)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2) # (B, nh, T, hs)
