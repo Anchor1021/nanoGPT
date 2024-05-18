@@ -31,12 +31,10 @@ class CausalSelfAttention(nn.Module):
     def __init__(self, config):
         super().__init__()
         assert config.n_embd % config.n_head == 0
-
         self.n_head = config.n_head
         self.key_size = config.key_size
         self.query_size = config.query_size
         # key, query, value projections for all heads, but in a batch
-
         self.c_attn = nn.Linear(config.n_embd, 
                                 config.key_size * config.n_head + 
                                 config.query_size * config.n_head + 
