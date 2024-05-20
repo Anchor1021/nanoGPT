@@ -76,6 +76,11 @@ compile = True # use PyTorch 2.0 to compile the model to be faster
 # new params
 key_size = 64
 query_size = 64
+window_size = 100
+is_causal = True
+mlp_type = "org"
+n_regist = 0
+abs_softmax = False
 
 # -----------------------------------------------------------------------------
 config_keys = [k for k,v in globals().items() if not k.startswith('_') and isinstance(v, (int, float, bool, str))]
@@ -125,9 +130,10 @@ def get_batch(split):
         data = np.memmap(os.path.join(data_dir, 'train.bin'), dtype=np.uint16, mode='r')
     else:
         data = np.memmap(os.path.join(data_dir, 'val.bin'), dtype=np.uint16, mode='r')
-    ix = torch.randint(len(data) - block_size, (batch_size,))
-    x = torch.stack([torch.from_numpy((data[i:i+block_size]).astype(np.int64)) for i in ix])
-    y = torch.stack([torch.from_numpy((data[i+1:i+1+block_size]).astype(np.int64)) for i in ix])
+    iter_size = block_size - n_regist
+    ix = torch.randint(len(data) - iter_size, (batch_size,))
+    x = torch.stack([torch.from_numpy((data[i:i+iter_size]).astype(np.int64)) for i in ix])
+    y = torch.stack([torch.from_numpy((data[i+1:i+1+iter_size]).astype(np.int64)) for i in ix])
     if device_type == 'cuda':
         # pin arrays x,y, which allows us to move them to GPU asynchronously (non_blocking=True)
         x, y = x.pin_memory().to(device, non_blocking=True), y.pin_memory().to(device, non_blocking=True)
@@ -150,7 +156,8 @@ if os.path.exists(meta_path):
 
 # model init
 model_args = dict(n_layer=n_layer, n_head=n_head, n_embd=n_embd, block_size=block_size,
-                  bias=bias, vocab_size=None, dropout=dropout, key_size=key_size, query_size=query_size ) # start with model_args from command line
+                  bias=bias, vocab_size=None, dropout=dropout, key_size=key_size, query_size=query_size,
+                  window_size=window_size, is_causal=is_causal, mlp_type=mlp_type, n_regist=n_regist, abs_softmax=abs_softmax) # start with model_args from command line
 if init_from == 'scratch':
     # init a new model from scratch
     print("Initializing a new model from scratch")

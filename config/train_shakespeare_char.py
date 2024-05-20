@@ -22,8 +22,15 @@ block_size = 256 # context of up to 256 previous characters
 n_layer = 6
 n_head = 6
 n_embd = 384
+
+# new params
 key_size = 64
 query_size = 64
+window_size = 100
+is_causual = True
+mlp_type = 'org'
+n_regist = 0
+abs_softmax = False
 
 dropout = 0.2
 
